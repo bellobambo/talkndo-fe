@@ -1,0 +1,859 @@
+{
+  "address": "9CLYHqqCBfDsuDrwooBbzV8FuvVzsZwadUCZ2NLWSURE",
+  "metadata": {
+    "name": "talkn_do",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "complete_challenge",
+      "discriminator": [
+        91,
+        147,
+        166,
+        187,
+        72,
+        3,
+        55,
+        209
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "challenge"
+          ]
+        },
+        {
+          "name": "challenge",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  108,
+                  108,
+                  101,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "account",
+                "path": "challenge.challenge_id",
+                "account": "Challenge"
+              }
+            ]
+          }
+        },
+        {
+          "name": "badge_asset",
+          "docs": [
+            "Fresh Metaplex Core asset account. The frontend generates and signs with this keypair."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "mpl_core_program",
+          "address": "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
+        }
+      ],
+      "args": [
+        {
+          "name": "proof_uri",
+          "type": "string"
+        },
+        {
+          "name": "badge_uri",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "expire_challenge",
+      "discriminator": [
+        73,
+        82,
+        20,
+        227,
+        216,
+        66,
+        58,
+        41
+      ],
+      "accounts": [
+        {
+          "name": "caller",
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "charity_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  114,
+                  105,
+                  116,
+                  121,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "challenge",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  108,
+                  108,
+                  101,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "challenge.creator",
+                "account": "Challenge"
+              },
+              {
+                "kind": "account",
+                "path": "challenge.challenge_id",
+                "account": "Challenge"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize",
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "charity_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  114,
+                  105,
+                  116,
+                  121,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "treasury",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "initialize_challenge",
+      "discriminator": [
+        131,
+        92,
+        76,
+        227,
+        13,
+        71,
+        164,
+        243
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "challenge",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  108,
+                  108,
+                  101,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "arg",
+                "path": "challenge_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "challenge_id",
+          "type": "u64"
+        },
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "metadata_uri",
+          "type": "string"
+        },
+        {
+          "name": "deadline",
+          "type": "i64"
+        },
+        {
+          "name": "stake_lamports",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdraw_charity_funds",
+      "discriminator": [
+        138,
+        207,
+        69,
+        192,
+        113,
+        11,
+        76,
+        63
+      ],
+      "accounts": [
+        {
+          "name": "charity_authority",
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "charity_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  104,
+                  97,
+                  114,
+                  105,
+                  116,
+                  121,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "recipient",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_lamports",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Challenge",
+      "discriminator": [
+        119,
+        250,
+        161,
+        121,
+        119,
+        81,
+        22,
+        208
+      ]
+    },
+    {
+      "name": "CharityVault",
+      "discriminator": [
+        50,
+        176,
+        78,
+        22,
+        165,
+        243,
+        252,
+        100
+      ]
+    },
+    {
+      "name": "ProgramConfig",
+      "discriminator": [
+        196,
+        210,
+        90,
+        231,
+        144,
+        149,
+        140,
+        63
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "BadgeEarned",
+      "discriminator": [
+        225,
+        182,
+        190,
+        32,
+        34,
+        212,
+        200,
+        93
+      ]
+    },
+    {
+      "name": "ChallengeCreated",
+      "discriminator": [
+        166,
+        178,
+        174,
+        178,
+        11,
+        172,
+        98,
+        243
+      ]
+    },
+    {
+      "name": "ChallengeExpired",
+      "discriminator": [
+        8,
+        175,
+        9,
+        64,
+        0,
+        48,
+        124,
+        120
+      ]
+    },
+    {
+      "name": "CharityFundsSent",
+      "discriminator": [
+        112,
+        35,
+        118,
+        7,
+        162,
+        212,
+        5,
+        139
+      ]
+    },
+    {
+      "name": "ProofSubmitted",
+      "discriminator": [
+        160,
+        51,
+        85,
+        70,
+        249,
+        89,
+        5,
+        139
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidTreasury",
+      "msg": "The treasury cannot be the default address"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidStake",
+      "msg": "The stake must be greater than zero"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidDeadline",
+      "msg": "The deadline must be in the future"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidTitle",
+      "msg": "The title is empty or too long"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidMetadataUri",
+      "msg": "The metadata URI is too long"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidProofUri",
+      "msg": "The proof URI is empty or too long"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidBadgeUri",
+      "msg": "The badge metadata URI is empty or too long"
+    },
+    {
+      "code": 6007,
+      "name": "ChallengeNotActive",
+      "msg": "This challenge is no longer active"
+    },
+    {
+      "code": 6008,
+      "name": "DeadlinePassed",
+      "msg": "The challenge deadline has passed"
+    },
+    {
+      "code": 6009,
+      "name": "ChallengeNotExpired",
+      "msg": "The challenge has not expired"
+    },
+    {
+      "code": 6010,
+      "name": "TreasuryMismatch",
+      "msg": "The supplied treasury does not match the program configuration"
+    },
+    {
+      "code": 6011,
+      "name": "ArithmeticOverflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidWithdrawalAmount",
+      "msg": "The withdrawal amount must be greater than zero"
+    },
+    {
+      "code": 6013,
+      "name": "InsufficientCharityFunds",
+      "msg": "The charity vault has insufficient available funds"
+    }
+  ],
+  "types": [
+    {
+      "name": "BadgeEarned",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "challenge",
+            "type": "pubkey"
+          },
+          {
+            "name": "recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "challenge_id",
+            "type": "u64"
+          },
+          {
+            "name": "badge_asset",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Challenge",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "challenge_id",
+            "type": "u64"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "deadline",
+            "type": "i64"
+          },
+          {
+            "name": "stake_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "ChallengeStatus"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "badge_asset",
+            "docs": [
+              "Metaplex Core asset minted after successful completion."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "name": "metadata_uri",
+            "type": "string"
+          },
+          {
+            "name": "proof_uri",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ChallengeCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "challenge",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "challenge_id",
+            "type": "u64"
+          },
+          {
+            "name": "deadline",
+            "type": "i64"
+          },
+          {
+            "name": "stake_lamports",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ChallengeExpired",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "challenge",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "stake_lamports",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ChallengeStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Completed"
+          },
+          {
+            "name": "Failed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CharityFundsSent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_lamports",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CharityVault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "total_received",
+            "type": "u64"
+          },
+          {
+            "name": "total_withdrawn",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProgramConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury",
+            "docs": [
+              "The signer allowed to distribute funds held by the charity vault."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProofSubmitted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "challenge",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "proof_uri",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "CHALLENGE_SEED",
+      "type": "bytes",
+      "value": "[99, 104, 97, 108, 108, 101, 110, 103, 101]"
+    },
+    {
+      "name": "CHARITY_VAULT_SEED",
+      "type": "bytes",
+      "value": "[99, 104, 97, 114, 105, 116, 121, 95, 118, 97, 117, 108, 116]"
+    },
+    {
+      "name": "CONFIG_SEED",
+      "type": "bytes",
+      "value": "[99, 111, 110, 102, 105, 103]"
+    }
+  ]
+}
