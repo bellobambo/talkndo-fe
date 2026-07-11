@@ -335,10 +335,10 @@ function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
       const selectedChallengeRow = active.find((r: ChallengeRow) => r.publicKey.toBase58() === challenge.toBase58());
       const title = selectedChallengeRow?.account.title || 'Challenge';
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#0B1849"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#C5F74C" font-family="sans-serif" font-size="24">${title}</text></svg>`;
-      const imageUri = \`data:image/svg+xml;utf8,\${encodeURIComponent(svg)}\`;
+      const imageUri = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
       const metadataJson = {
         name: "talk and do",
-        description: \`Completed \${title}\`,
+        description: `Completed ${title}`,
         image: imageUri,
       };
       const jsonFile = new File([JSON.stringify(metadataJson)], 'metadata.json', { type: 'application/json' });
