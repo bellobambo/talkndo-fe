@@ -267,7 +267,12 @@ function CreateChallenge({ program, publicKey, execute }: any) {
         .initializeChallenge(id, title, metadataUriValue, new BN(deadline), stake)
         .accounts({ creator: publicKey, config: getConfigPda(), challenge, systemProgram: SystemProgram.programId })
         .postInstructions([memo]);
-      await execute('Challenge created', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
+      const signature = await execute('Challenge created', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
+      if (signature) {
+        event.currentTarget.reset();
+        setMetadataUri('');
+        setUploadProgress(0);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -359,7 +364,12 @@ function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
 
       const memo = createMemoInstruction({ type: 'talkndo:complete_challenge', challenge: challenge.toBase58(), creator: publicKey.toBase58(), badgeAsset: badge.publicKey.toBase58() });
       const builder = program.methods.completeChallenge(proofUri, actualBadgeUri).accounts({ creator: publicKey, challenge, badgeAsset: badge.publicKey, systemProgram: SystemProgram.programId, mplCoreProgram: new PublicKey('CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d') }).signers([badge]).postInstructions([memo]);
-      await execute('Challenge completed', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc(), signers: [badge] }));
+      const signature = await execute('Challenge completed', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc(), signers: [badge] }));
+      if (signature) {
+        event.currentTarget.reset();
+        setProofUri('');
+        setUploadProgress(0);
+      }
     } catch (e) {
       toast.error(parseError(e), { id });
     } finally {
@@ -380,7 +390,10 @@ function ExpireChallenge({ program, challenges, execute }: any) {
       const caller = program.provider.publicKey as PublicKey;
       const memo = createMemoInstruction({ type: 'talkndo:expire_challenge', challenge: challenge.toBase58(), caller: caller.toBase58() });
       const builder = program.methods.expireChallenge().accounts({ caller, config: getConfigPda(), charityVault: getCharityVaultPda(), challenge }).postInstructions([memo]);
-      await execute('Challenge expired', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
+      const signature = await execute('Challenge expired', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
+      if (signature) {
+        event.currentTarget.reset();
+      }
     } finally {
       setSubmitting(false);
     }
@@ -399,7 +412,8 @@ function Admin({ program, publicKey, config, vault, treasuryMembers, execute, is
       const treasury = new PublicKey(String(new FormData(event.currentTarget).get('treasury')));
       const memo = createMemoInstruction({ type: 'talkndo:initialize_protocol', authority: publicKey.toBase58(), primaryTreasury: treasury.toBase58() });
       const builder = program.methods.initialize(treasury).accounts({ authority: publicKey, config: getConfigPda(), charityVault: getCharityVaultPda(), primaryTreasuryMember: getTreasuryMemberPda(treasury), systemProgram: SystemProgram.programId }).postInstructions([memo]);
-      await execute('Protocol initialized', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
+      const signature = await execute('Protocol initialized', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
+      if (signature) event.currentTarget.reset();
     } finally { setPendingAction(null); }
   };
 
@@ -411,8 +425,8 @@ function Admin({ program, publicKey, config, vault, treasuryMembers, execute, is
       const member = new PublicKey(String(new FormData(form).get('member')));
       const memo = createMemoInstruction({ type: 'talkndo:add_treasury_member', primaryTreasury: publicKey.toBase58(), member: member.toBase58() });
       const builder = program.methods.addTreasuryMember(member).accounts({ primaryTreasuryAuthority: publicKey, config: getConfigPda(), treasuryMember: getTreasuryMemberPda(member), systemProgram: SystemProgram.programId }).postInstructions([memo]);
-      await execute('Treasury member added', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
-      form.reset();
+      const signature = await execute('Treasury member added', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
+      if (signature) form.reset();
     } finally { setPendingAction(null); }
   };
 
@@ -441,7 +455,10 @@ function Admin({ program, publicKey, config, vault, treasuryMembers, execute, is
       let builder = program.methods.withdrawCharityFunds(amount).accounts({ charityAuthority: publicKey, config: getConfigPda(), treasuryMember, charityVault: getCharityVaultPda(), recipient }).postInstructions([memo]);
       if (bootstrapPrimaryMember) builder = builder.preInstructions([bootstrapPrimaryMember]);
       const signature = await execute('Charity funds sent', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
-      if (signature) setWithdrawOpen(false);
+      if (signature) {
+        event.currentTarget.reset();
+        setWithdrawOpen(false);
+      }
     } finally { setPendingAction(null); }
   };
 
