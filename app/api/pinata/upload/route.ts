@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const input = await request.formData();
     const file = input.get('file');
     if (!(file instanceof File)) return NextResponse.json({ error: 'Choose a file first.' }, { status: 400 });
-    if (file.type !== 'application/pdf' && file.type !== 'application/json') return NextResponse.json({ error: 'Only PDF and JSON files are accepted.' }, { status: 415 });
+    if (!['application/pdf', 'application/json', 'image/svg+xml'].includes(file.type)) return NextResponse.json({ error: 'Unsupported file type.' }, { status: 415 });
     if (file.size > MAX_PDF_BYTES) return NextResponse.json({ error: 'File must be 10 MB or smaller.' }, { status: 413 });
 
     const payload = new FormData();
