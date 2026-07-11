@@ -349,7 +349,7 @@ function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
       const imageUri = svgResult.url;
 
       const metadataJson = {
-        name: "talk and do",
+        name: "Talk and Do",
         description: `Completed ${title}`,
         image: imageUri,
       };
