@@ -8,6 +8,86 @@
   },
   "instructions": [
     {
+      "name": "add_treasury_member",
+      "discriminator": [
+        204,
+        46,
+        232,
+        131,
+        82,
+        170,
+        11,
+        5
+      ],
+      "accounts": [
+        {
+          "name": "primary_treasury_authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury_member",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121,
+                  95,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "member"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "member",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "complete_challenge",
       "discriminator": [
         91,
@@ -247,6 +327,38 @@
           }
         },
         {
+          "name": "primary_treasury_member",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121,
+                  95,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "treasury"
+              }
+            ]
+          }
+        },
+        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
@@ -353,20 +465,21 @@
       ]
     },
     {
-      "name": "withdraw_charity_funds",
+      "name": "remove_treasury_member",
       "discriminator": [
-        138,
-        207,
-        69,
-        192,
-        113,
-        11,
-        76,
-        63
+        97,
+        169,
+        0,
+        133,
+        187,
+        103,
+        150,
+        173
       ],
       "accounts": [
         {
-          "name": "charity_authority",
+          "name": "primary_treasury_authority",
+          "writable": true,
           "signer": true
         },
         {
@@ -383,6 +496,115 @@
                   105,
                   103
                 ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury_member",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121,
+                  95,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "member"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "member",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "withdraw_charity_funds",
+      "discriminator": [
+        138,
+        207,
+        69,
+        192,
+        113,
+        11,
+        76,
+        63
+      ],
+      "accounts": [
+        {
+          "name": "charity_authority",
+          "signer": true,
+          "relations": [
+            "treasury_member"
+          ]
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury_member",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121,
+                  95,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "charity_authority"
               }
             ]
           }
@@ -465,6 +687,19 @@
         140,
         63
       ]
+    },
+    {
+      "name": "TreasuryMember",
+      "discriminator": [
+        23,
+        127,
+        207,
+        135,
+        165,
+        172,
+        56,
+        105
+      ]
     }
   ],
   "events": [
@@ -531,6 +766,32 @@
         89,
         5,
         139
+      ]
+    },
+    {
+      "name": "TreasuryMemberAdded",
+      "discriminator": [
+        92,
+        193,
+        95,
+        197,
+        141,
+        144,
+        211,
+        162
+      ]
+    },
+    {
+      "name": "TreasuryMemberRemoved",
+      "discriminator": [
+        95,
+        12,
+        108,
+        164,
+        88,
+        128,
+        75,
+        84
       ]
     }
   ],
@@ -604,6 +865,16 @@
       "code": 6013,
       "name": "InsufficientCharityFunds",
       "msg": "The charity vault has insufficient available funds"
+    },
+    {
+      "code": 6014,
+      "name": "InvalidTreasuryMember",
+      "msg": "The treasury member address cannot be the default address"
+    },
+    {
+      "code": 6015,
+      "name": "CannotRemovePrimaryTreasury",
+      "msg": "The primary treasury authority cannot be removed"
     }
   ],
   "types": [
@@ -837,6 +1108,62 @@
           }
         ]
       }
+    },
+    {
+      "name": "TreasuryMember",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "charity_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "added_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "added_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TreasuryMemberAdded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "member",
+            "type": "pubkey"
+          },
+          {
+            "name": "added_by",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TreasuryMemberRemoved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "member",
+            "type": "pubkey"
+          },
+          {
+            "name": "removed_by",
+            "type": "pubkey"
+          }
+        ]
+      }
     }
   ],
   "constants": [
@@ -854,6 +1181,11 @@
       "name": "CONFIG_SEED",
       "type": "bytes",
       "value": "[99, 111, 110, 102, 105, 103]"
+    },
+    {
+      "name": "TREASURY_MEMBER_SEED",
+      "type": "bytes",
+      "value": "[116, 114, 101, 97, 115, 117, 114, 121, 95, 109, 101, 109, 98, 101, 114]"
     }
   ]
 }

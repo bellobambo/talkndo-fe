@@ -5,7 +5,7 @@ import { BN } from '@coral-xyz/anchor';
 import { useAnchorWallet, useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, TransactionInstruction } from '@solana/web3.js';
-import { Progress, Upload } from 'antd';
+import { Drawer, Progress, Upload } from 'antd';
 import type { UploadProps } from 'antd/es/upload/interface';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -14,12 +14,14 @@ import {
   getCharityVaultPda,
   getConfigPda,
   getProgram,
+  getTreasuryMemberPda,
   PROGRAM_ID,
   toSol,
 } from '@/lib/program';
 
 type View = 'challenges' | 'create' | 'complete' | 'expire' | 'admin';
 type ChallengeRow = { publicKey: PublicKey; account: any };
+type TreasuryMemberRow = { publicKey: PublicKey; account: any };
 
 const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
 
@@ -53,7 +55,7 @@ const generateChallengeId = () => {
   return id.isZero() ? new BN(1) : id;
 };
 
-const createMemoInstruction = (details: Record<string, string | number>) => new TransactionInstruction({
+const createMemoInstruction = (details: Record<string, string | number | boolean>) => new TransactionInstruction({
   keys: [],
   programId: MEMO_PROGRAM_ID,
   data: Buffer.from(JSON.stringify(details), 'utf8'),
@@ -69,28 +71,32 @@ export function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState<any>(null);
   const [vault, setVault] = useState<any>(null);
+  const [treasuryMembers, setTreasuryMembers] = useState<TreasuryMemberRow[]>([]);
   const program = useMemo(() => wallet ? getProgram(connection, wallet) : null, [connection, wallet]);
   const isAuthority = Boolean(publicKey && config?.authority?.equals(publicKey));
-  const isTreasury = Boolean(publicKey && config?.treasury?.equals(publicKey));
-  const canAccessProtocol = isAuthority || isTreasury;
+  const isPrimaryTreasury = Boolean(publicKey && config?.treasury?.equals(publicKey));
+  const isTreasuryMember = Boolean(publicKey && treasuryMembers.some(({ account }) => account.charityAuthority.equals(publicKey)));
+  const canAccessProtocol = isAuthority || isPrimaryTreasury || isTreasuryMember;
 
   const refresh = useCallback(async () => {
     if (!program || !publicKey) {
-      setChallenges([]); setWalletBalance(null); setConfig(null); setVault(null); return;
+      setChallenges([]); setWalletBalance(null); setConfig(null); setVault(null); setTreasuryMembers([]); return;
     }
     setLoading(true);
     try {
-      const [all, balance, configAccount, vaultAccount] = await Promise.all([
+      const [all, balance, configAccount, vaultAccount, memberAccounts] = await Promise.all([
         (program.account as any).challenge.all([
           { memcmp: { offset: 8, bytes: publicKey.toBase58() } },
         ]),
         connection.getBalance(publicKey, 'confirmed'),
         (program.account as any).programConfig.fetchNullable(getConfigPda()),
         (program.account as any).charityVault.fetchNullable(getCharityVaultPda()),
+        (program.account as any).treasuryMember.all(),
       ]);
       setChallenges(all.sort((a: ChallengeRow, b: ChallengeRow) => b.account.challengeId.cmp(a.account.challengeId)));
       setWalletBalance(balance);
       setConfig(configAccount); setVault(vaultAccount);
+      setTreasuryMembers(memberAccounts);
     } catch (error) { toast.error(parseError(error)); }
     finally { setLoading(false); }
   }, [connection, program, publicKey]);
@@ -151,7 +157,7 @@ export function Dashboard() {
         {publicKey && view === 'create' && program ? <CreateChallenge program={program} publicKey={publicKey} execute={execute} /> : null}
         {publicKey && view === 'complete' && program ? <CompleteChallenge program={program} publicKey={publicKey} challenges={challenges} execute={execute} /> : null}
         {publicKey && view === 'expire' && program ? <ExpireChallenge program={program} challenges={challenges} execute={execute} /> : null}
-        {publicKey && view === 'admin' && program && canAccessProtocol ? <Admin program={program} publicKey={publicKey} config={config} vault={vault} execute={execute} isAuthority={isAuthority} isTreasury={isTreasury} /> : null}
+        {publicKey && view === 'admin' && program && canAccessProtocol ? <Admin program={program} publicKey={publicKey} config={config} vault={vault} treasuryMembers={treasuryMembers} execute={execute} isAuthority={isAuthority} isPrimaryTreasury={isPrimaryTreasury} isTreasuryMember={isTreasuryMember} /> : null}
       </section>
 
       <footer><span>Program {short(PROGRAM_ID)}</span><a href={`https://explorer.solana.com/address/${PROGRAM_ID.toBase58()}?cluster=devnet`} target="_blank" rel="noreferrer">View on Explorer ↗</a></footer>
@@ -332,7 +338,8 @@ function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
       const data = new FormData(event.currentTarget);
       const challenge = new PublicKey(String(data.get('challenge')));
       const badge = Keypair.generate();
-      const builder = program.methods.completeChallenge(proofUri, badgeUri.trim()).accounts({ creator: publicKey, challenge, badgeAsset: badge.publicKey, systemProgram: SystemProgram.programId, mplCoreProgram: new PublicKey('CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d') }).signers([badge]);
+      const memo = createMemoInstruction({ type: 'talkndo:complete_challenge', challenge: challenge.toBase58(), creator: publicKey.toBase58(), badgeAsset: badge.publicKey.toBase58() });
+      const builder = program.methods.completeChallenge(proofUri, badgeUri.trim()).accounts({ creator: publicKey, challenge, badgeAsset: badge.publicKey, systemProgram: SystemProgram.programId, mplCoreProgram: new PublicKey('CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d') }).signers([badge]).postInstructions([memo]);
       await execute('Challenge completed', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc(), signers: [badge] }));
     } finally {
       setSubmitting(false);
@@ -349,7 +356,9 @@ function ExpireChallenge({ program, challenges, execute }: any) {
     setSubmitting(true);
     try {
       const challenge = new PublicKey(String(new FormData(event.currentTarget).get('challenge')));
-      const builder = program.methods.expireChallenge().accounts({ caller: program.provider.publicKey, config: getConfigPda(), charityVault: getCharityVaultPda(), challenge });
+      const caller = program.provider.publicKey as PublicKey;
+      const memo = createMemoInstruction({ type: 'talkndo:expire_challenge', challenge: challenge.toBase58(), caller: caller.toBase58() });
+      const builder = program.methods.expireChallenge().accounts({ caller, config: getConfigPda(), charityVault: getCharityVaultPda(), challenge }).postInstructions([memo]);
       await execute('Challenge expired', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
     } finally {
       setSubmitting(false);
@@ -358,11 +367,72 @@ function ExpireChallenge({ program, challenges, execute }: any) {
   return <Interaction title="Expire a challenge" subtitle="Anyone may settle an overdue active challenge. Its stake moves to the charity vault."><form onSubmit={submit} className="form"><SelectChallenge rows={expired} /><div className="notice">This action is irreversible. The challenge becomes failed and its stake is donated.</div><button className="danger" disabled={!expired.length || submitting} type="submit">{submitting ? <><span className="button-spinner" aria-hidden="true" />Expiring…</> : 'Review & expire challenge'}</button></form></Interaction>;
 }
 
-function Admin({ program, publicKey, config, vault, execute, isAuthority, isTreasury }: any) {
-  const [pendingAction, setPendingAction] = useState<'initialize' | 'withdraw' | null>(null);
-  const initialize = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); setPendingAction('initialize'); try { const treasury = new PublicKey(String(new FormData(event.currentTarget).get('treasury'))); const builder = program.methods.initialize(treasury).accounts({ authority: publicKey, config: getConfigPda(), charityVault: getCharityVaultPda(), systemProgram: SystemProgram.programId }); await execute('Protocol initialized', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() })); } finally { setPendingAction(null); } };
-  const withdraw = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); setPendingAction('withdraw'); try { const data = new FormData(event.currentTarget); const recipient = new PublicKey(String(data.get('recipient'))); const amount = new BN(Math.round(Number(data.get('amount')) * 1e9)); const builder = program.methods.withdrawCharityFunds(amount).accounts({ charityAuthority: publicKey, config: getConfigPda(), charityVault: getCharityVaultPda(), recipient }); await execute('Charity funds sent', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() })); } finally { setPendingAction(null); } };
-  return <div className={`admin-grid${isTreasury ? '' : ' single'}`}><Interaction title="Protocol state" subtitle="Configuration and charity accounting from devnet.">{config ? <><dl className="state-list"><div><dt>Authority</dt><dd>{short(config.authority)}</dd></div><div><dt>Treasury</dt><dd>{short(config.treasury)}</dd></div><div><dt>Total received</dt><dd>{toSol(vault?.totalReceived ?? 0)} SOL</dd></div><div><dt>Total withdrawn</dt><dd>{toSol(vault?.totalWithdrawn ?? 0)} SOL</dd></div></dl><small>Connected role: {isAuthority && isTreasury ? 'Authority and treasury' : isAuthority ? 'Authority' : 'Treasury'}</small></> : <form onSubmit={initialize} className="form"><div className="notice">The protocol has not been initialized on this cluster. This can only happen once.</div><Field label="Treasury wallet" name="treasury" placeholder="Solana address" required /><button className="primary" disabled={pendingAction !== null}>{pendingAction === 'initialize' ? <><span className="button-spinner" aria-hidden="true" />Initializing…</> : 'Initialize protocol'}</button></form>}</Interaction>{config && isTreasury ? <Interaction title="Send charity funds" subtitle="Only the configured treasury wallet can authorize this action."><form onSubmit={withdraw} className="form"><Field label="Recipient" name="recipient" placeholder="Solana address" required /><Field label="Amount (SOL)" name="amount" type="number" step="0.000000001" min="0.000000001" required /><button className="primary" disabled={pendingAction !== null}>{pendingAction === 'withdraw' ? <><span className="button-spinner" aria-hidden="true" />Withdrawing…</> : 'Review withdrawal'}</button></form></Interaction> : null}</div>;
+function Admin({ program, publicKey, config, vault, treasuryMembers, execute, isAuthority, isPrimaryTreasury, isTreasuryMember }: any) {
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+
+  const initialize = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPendingAction('initialize');
+    try {
+      const treasury = new PublicKey(String(new FormData(event.currentTarget).get('treasury')));
+      const memo = createMemoInstruction({ type: 'talkndo:initialize_protocol', authority: publicKey.toBase58(), primaryTreasury: treasury.toBase58() });
+      const builder = program.methods.initialize(treasury).accounts({ authority: publicKey, config: getConfigPda(), charityVault: getCharityVaultPda(), primaryTreasuryMember: getTreasuryMemberPda(treasury), systemProgram: SystemProgram.programId }).postInstructions([memo]);
+      await execute('Protocol initialized', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
+    } finally { setPendingAction(null); }
+  };
+
+  const addMember = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    setPendingAction('add');
+    try {
+      const member = new PublicKey(String(new FormData(form).get('member')));
+      const memo = createMemoInstruction({ type: 'talkndo:add_treasury_member', primaryTreasury: publicKey.toBase58(), member: member.toBase58() });
+      const builder = program.methods.addTreasuryMember(member).accounts({ primaryTreasuryAuthority: publicKey, config: getConfigPda(), treasuryMember: getTreasuryMemberPda(member), systemProgram: SystemProgram.programId }).postInstructions([memo]);
+      await execute('Treasury member added', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
+      form.reset();
+    } finally { setPendingAction(null); }
+  };
+
+  const removeMember = async (member: PublicKey) => {
+    const action = `remove:${member.toBase58()}`;
+    setPendingAction(action);
+    try {
+      const memo = createMemoInstruction({ type: 'talkndo:remove_treasury_member', primaryTreasury: publicKey.toBase58(), member: member.toBase58() });
+      const builder = program.methods.removeTreasuryMember(member).accounts({ primaryTreasuryAuthority: publicKey, config: getConfigPda(), treasuryMember: getTreasuryMemberPda(member) }).postInstructions([memo]);
+      await execute('Treasury member removed', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
+    } finally { setPendingAction(null); }
+  };
+
+  const withdraw = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPendingAction('withdraw');
+    try {
+      const data = new FormData(event.currentTarget);
+      const recipient = new PublicKey(String(data.get('recipient')));
+      const amount = new BN(Math.round(Number(data.get('amount')) * LAMPORTS_PER_SOL));
+      const treasuryMember = getTreasuryMemberPda(publicKey);
+      const bootstrapPrimaryMember = isPrimaryTreasury && !isTreasuryMember
+        ? await program.methods.addTreasuryMember(publicKey).accounts({ primaryTreasuryAuthority: publicKey, config: getConfigPda(), treasuryMember, systemProgram: SystemProgram.programId }).instruction()
+        : null;
+      const memo = createMemoInstruction({ type: 'talkndo:withdraw_charity_funds', authority: publicKey.toBase58(), recipient: recipient.toBase58(), amountLamports: amount.toString(), activatedPrimaryMember: Boolean(bootstrapPrimaryMember) });
+      let builder = program.methods.withdrawCharityFunds(amount).accounts({ charityAuthority: publicKey, config: getConfigPda(), treasuryMember, charityVault: getCharityVaultPda(), recipient }).postInstructions([memo]);
+      if (bootstrapPrimaryMember) builder = builder.preInstructions([bootstrapPrimaryMember]);
+      const signature = await execute('Charity funds sent', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
+      if (signature) setWithdrawOpen(false);
+    } finally { setPendingAction(null); }
+  };
+
+  const role = isPrimaryTreasury ? 'Primary treasury' : isTreasuryMember ? 'Treasury member' : isAuthority ? 'Protocol authority' : 'Viewer';
+  const canWithdraw = Boolean(config && (isPrimaryTreasury || isTreasuryMember));
+  return <>
+    <div className={`admin-grid${isPrimaryTreasury ? '' : ' single'}`}>
+      <Interaction title="Protocol state" subtitle="Configuration and charity accounting from devnet.">{config ? <><dl className="state-list"><div><dt>Authority</dt><dd>{short(config.authority)}</dd></div><div><dt>Primary treasury</dt><dd>{short(config.treasury)}</dd></div><div><dt>Authorized members</dt><dd>{treasuryMembers.length}</dd></div><div><dt>Total received</dt><dd>{toSol(vault?.totalReceived ?? 0)} SOL</dd></div><div><dt>Total withdrawn</dt><dd>{toSol(vault?.totalWithdrawn ?? 0)} SOL</dd></div></dl><small>Connected role: {role}</small>{canWithdraw ? <button className="primary protocol-withdraw" type="button" onClick={() => setWithdrawOpen(true)}>Withdraw funds</button> : null}</> : <form onSubmit={initialize} className="form"><div className="notice">The protocol has not been initialized on this cluster. This can only happen once.</div><Field label="Treasury wallet" name="treasury" placeholder="Solana address" required /><button className="primary" disabled={pendingAction !== null}>{pendingAction === 'initialize' ? <><span className="button-spinner" aria-hidden="true" />Initializing…</> : 'Initialize protocol'}</button></form>}</Interaction>
+      {config && isPrimaryTreasury ? <Interaction title="Manage withdrawal access" subtitle="Add or revoke wallets that may distribute charity funds."><form onSubmit={addMember} className="form"><Field label="Wallet to authorize" name="member" placeholder="Solana address" required /><button className="primary" disabled={pendingAction !== null}>{pendingAction === 'add' ? <><span className="button-spinner" aria-hidden="true" />Adding…</> : 'Add treasury member'}</button></form><div className="member-list">{treasuryMembers.map(({ publicKey: memberPda, account }: TreasuryMemberRow) => { const member = account.charityAuthority as PublicKey; const isPrimary = member.equals(config.treasury); const removing = pendingAction === `remove:${member.toBase58()}`; return <div key={memberPda.toBase58()}><span title={member.toBase58()}>{short(member)}{isPrimary ? ' · Primary' : ''}</span>{!isPrimary ? <button className="danger" type="button" disabled={pendingAction !== null} onClick={() => removeMember(member)}>{removing ? <><span className="button-spinner" aria-hidden="true" />Removing…</> : 'Remove'}</button> : null}</div>; })}</div></Interaction> : null}
+    </div>
+    <Drawer title="Withdraw charity funds" placement="right" width="min(540px, 100vw)" open={withdrawOpen} closable={pendingAction !== 'withdraw'} maskClosable={pendingAction !== 'withdraw'} onClose={() => setWithdrawOpen(false)}>{isPrimaryTreasury && !isTreasuryMember ? <div className="notice">This protocol was initialized before withdrawal-member records were introduced. Your first withdrawal will authorize this existing primary treasury wallet and withdraw the funds together—no new wallet is added.</div> : null}<form onSubmit={withdraw} className="form drawer-form"><Field label="Recipient" name="recipient" placeholder="Solana address" required /><Field label="Amount (SOL)" name="amount" type="number" step="0.000000001" min="0.000000001" required /><button className="primary" disabled={pendingAction !== null}>{pendingAction === 'withdraw' ? <><span className="button-spinner" aria-hidden="true" />Withdrawing…</> : 'Review withdrawal'}</button></form></Drawer>
+  </>;
 }
 
 function Interaction({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) { return <article className="interaction"><p className="eyebrow">Contract interaction</p><h2>{title}</h2><p className="subtitle">{subtitle}</p>{children}</article>; }

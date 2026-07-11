@@ -9,10 +9,13 @@ export const PROGRAM_ID = new PublicKey(
 export const CONFIG_SEED = Buffer.from('config');
 export const CHARITY_VAULT_SEED = Buffer.from('charity_vault');
 export const CHALLENGE_SEED = Buffer.from('challenge');
+export const TREASURY_MEMBER_SEED = Buffer.from('treasury_member');
 
 export const getConfigPda = () => PublicKey.findProgramAddressSync([CONFIG_SEED], PROGRAM_ID)[0];
 export const getCharityVaultPda = () =>
   PublicKey.findProgramAddressSync([CHARITY_VAULT_SEED], PROGRAM_ID)[0];
+export const getTreasuryMemberPda = (member: PublicKey) =>
+  PublicKey.findProgramAddressSync([TREASURY_MEMBER_SEED, member.toBuffer()], PROGRAM_ID)[0];
 export const getChallengePda = (creator: PublicKey, id: BN) =>
   PublicKey.findProgramAddressSync(
     [CHALLENGE_SEED, creator.toBuffer(), id.toArrayLike(Buffer, 'le', 8)],
