@@ -9,9 +9,9 @@ export async function POST(request: Request) {
 
     const input = await request.formData();
     const file = input.get('file');
-    if (!(file instanceof File)) return NextResponse.json({ error: 'Choose a PDF first.' }, { status: 400 });
-    if (file.type !== 'application/pdf') return NextResponse.json({ error: 'Only PDF files are accepted.' }, { status: 415 });
-    if (file.size > MAX_PDF_BYTES) return NextResponse.json({ error: 'PDF must be 10 MB or smaller.' }, { status: 413 });
+    if (!(file instanceof File)) return NextResponse.json({ error: 'Choose a file first.' }, { status: 400 });
+    if (file.type !== 'application/pdf' && file.type !== 'application/json') return NextResponse.json({ error: 'Only PDF and JSON files are accepted.' }, { status: 415 });
+    if (file.size > MAX_PDF_BYTES) return NextResponse.json({ error: 'File must be 10 MB or smaller.' }, { status: 413 });
 
     const payload = new FormData();
     payload.set('file', file, file.name);

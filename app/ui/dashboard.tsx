@@ -142,7 +142,7 @@ export function Dashboard() {
       </header>
 
       <section className="hero">
-        <p className="eyebrow">Proof of Passion · On-chain accountability</p>
+        <p className="eyebrow">talk and do · On-chain accountability</p>
         <h1>Bet on Yourself</h1>
         <p>Stake SOL on a personal challenge. Complete it before the deadline to reclaim your stake and mint a permanent badge.</p>
       </section>
@@ -278,7 +278,6 @@ function CreateChallenge({ program, publicKey, execute }: any) {
 function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
   const active = challenges.filter((x: ChallengeRow) => statusName(x.account.status, x.account.deadline) === 'Active');
   const [proofUri, setProofUri] = useState('');
-  const [badgeUri, setBadgeUri] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -324,28 +323,43 @@ function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
       return true;
     },
   };
-  useEffect(() => {
-    if (!badgeUri) {
-      const generatedBadgeUri = `https://talkndo.example/badges/${Date.now()}.json`;
-      setBadgeUri(generatedBadgeUri);
-    }
-  }, [badgeUri]);
-
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitting(true);
+    const id = toast.loading('Uploading metadata to IPFS…');
     try {
       const data = new FormData(event.currentTarget);
       const challenge = new PublicKey(String(data.get('challenge')));
       const badge = Keypair.generate();
+      
+      const selectedChallengeRow = active.find((r: ChallengeRow) => r.publicKey.toBase58() === challenge.toBase58());
+      const title = selectedChallengeRow?.account.title || 'Challenge';
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#0B1849"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#C5F74C" font-family="sans-serif" font-size="24">${title}</text></svg>`;
+      const imageUri = \`data:image/svg+xml;utf8,\${encodeURIComponent(svg)}\`;
+      const metadataJson = {
+        name: "talk and do",
+        description: \`Completed \${title}\`,
+        image: imageUri,
+      };
+      const jsonFile = new File([JSON.stringify(metadataJson)], 'metadata.json', { type: 'application/json' });
+      const form = new FormData();
+      form.set('file', jsonFile);
+      const res = await fetch('/api/pinata/upload', { method: 'POST', body: form });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to upload metadata');
+      const actualBadgeUri = result.url;
+      toast.success('Metadata pinned to IPFS', { id });
+
       const memo = createMemoInstruction({ type: 'talkndo:complete_challenge', challenge: challenge.toBase58(), creator: publicKey.toBase58(), badgeAsset: badge.publicKey.toBase58() });
-      const builder = program.methods.completeChallenge(proofUri, badgeUri.trim()).accounts({ creator: publicKey, challenge, badgeAsset: badge.publicKey, systemProgram: SystemProgram.programId, mplCoreProgram: new PublicKey('CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d') }).signers([badge]).postInstructions([memo]);
+      const builder = program.methods.completeChallenge(proofUri, actualBadgeUri).accounts({ creator: publicKey, challenge, badgeAsset: badge.publicKey, systemProgram: SystemProgram.programId, mplCoreProgram: new PublicKey('CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d') }).signers([badge]).postInstructions([memo]);
       await execute('Challenge completed', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc(), signers: [badge] }));
+    } catch (e) {
+      toast.error(parseError(e), { id });
     } finally {
       setSubmitting(false);
     }
   };
-  return <Interaction title="Submit proof" subtitle="Upload your proof PDF, then mint your non-transferable Metaplex Core badge."><form onSubmit={submit} className="form"><SelectChallenge rows={active} /><Upload {...uploadProps} className="upload-field" style={{ width: '100%' }}><label className="upload" style={{ width: '100%' }}><span>{uploading ? 'Uploading…' : proofUri ? '✓ PDF ready on IPFS' : 'Choose proof PDF (max 10 MB)'}</span>{uploading || uploadProgress > 0 ? <Progress percent={uploadProgress} size="small" strokeColor={{ '0%': 'var(--green)', '100%': 'var(--lime)' }} trailColor="rgba(11,24,73,0.12)" /> : null}</label></Upload><small>Metadata URI (optional)</small><input type="hidden" name="proofUri" value={proofUri} /><input type="hidden" name="badgeUri" value={badgeUri} /><button className="primary" disabled={!active.length || uploading || !proofUri || !badgeUri || submitting} type="submit">{submitting ? <><span className="button-spinner" aria-hidden="true" />Completing…</> : 'Review, reclaim stake & mint'}</button></form></Interaction>;
+  return <Interaction title="Submit proof" subtitle="Upload your proof PDF, then mint your non-transferable Metaplex Core badge."><form onSubmit={submit} className="form"><SelectChallenge rows={active} /><Upload {...uploadProps} className="upload-field" style={{ width: '100%' }}><label className="upload" style={{ width: '100%' }}><span>{uploading ? 'Uploading…' : proofUri ? '✓ PDF ready on IPFS' : 'Choose proof PDF (max 10 MB)'}</span>{uploading || uploadProgress > 0 ? <Progress percent={uploadProgress} size="small" strokeColor={{ '0%': 'var(--green)', '100%': 'var(--lime)' }} trailColor="rgba(11,24,73,0.12)" /> : null}</label></Upload><input type="hidden" name="proofUri" value={proofUri} /><button className="primary" disabled={!active.length || uploading || !proofUri || submitting} type="submit">{submitting ? <><span className="button-spinner" aria-hidden="true" />Completing…</> : 'Review, reclaim stake & mint'}</button></form></Interaction>;
 }
 
 function ExpireChallenge({ program, challenges, execute }: any) {

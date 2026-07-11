@@ -4,7 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "TalknDo | Proof of Passion",
+  title: "TalknDo | talk and do",
   description: "Commit to a challenge, prove the work, and earn an on-chain badge.",
 };
 
