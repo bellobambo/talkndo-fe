@@ -10,12 +10,13 @@ export async function POST(request: Request) {
     const input = await request.formData();
     const file = input.get('file');
     if (!(file instanceof File)) return NextResponse.json({ error: 'Choose a file first.' }, { status: 400 });
-    if (!['application/pdf', 'application/json', 'image/svg+xml'].includes(file.type)) return NextResponse.json({ error: 'Unsupported file type.' }, { status: 415 });
+    if (!['application/pdf', 'application/json', 'image/png'].includes(file.type)) return NextResponse.json({ error: 'Unsupported file type.' }, { status: 415 });
     if (file.size > MAX_PDF_BYTES) return NextResponse.json({ error: 'File must be 10 MB or smaller.' }, { status: 413 });
 
     const payload = new FormData();
     payload.set('file', file, file.name);
-    payload.set('pinataMetadata', JSON.stringify({ name: file.name }));
+    payload.set('network', 'public');
+    payload.set('name', file.name);
     const response = await fetch('https://uploads.pinata.cloud/v3/files', {
       method: 'POST',
       headers: { Authorization: `Bearer ${jwt}` },

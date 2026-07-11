@@ -93,7 +93,7 @@ export function Dashboard() {
         (program.account as any).charityVault.fetchNullable(getCharityVaultPda()),
         (program.account as any).treasuryMember.all(),
       ]);
-      setChallenges(all.sort((a: ChallengeRow, b: ChallengeRow) => b.account.challengeId.cmp(a.account.challengeId)));
+      setChallenges(all.sort((a: ChallengeRow, b: ChallengeRow) => b.account.createdAt.cmp(a.account.createdAt)));
       setWalletBalance(balance);
       setConfig(configAccount); setVault(vaultAccount);
       setTreasuryMembers(memberAccounts);
@@ -245,9 +245,10 @@ function CreateChallenge({ program, publicKey, execute }: any) {
   };
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setSubmitting(true);
     try {
-      const data = new FormData(event.currentTarget);
+      const data = new FormData(formElement);
       const id = generateChallengeId();
       const title = String(data.get('title')).trim();
       const metadataUriValue = String(data.get('metadataUri') ?? '').trim();
@@ -269,7 +270,7 @@ function CreateChallenge({ program, publicKey, execute }: any) {
         .postInstructions([memo]);
       const signature = await execute('Challenge created', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
       if (signature) {
-        event.currentTarget.reset();
+        formElement.reset();
         setMetadataUri('');
         setUploadProgress(0);
       }
@@ -330,28 +331,49 @@ function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
   };
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setSubmitting(true);
     const id = toast.loading('Uploading metadata to IPFS…');
     try {
-      const data = new FormData(event.currentTarget);
+      const data = new FormData(formElement);
       const challenge = new PublicKey(String(data.get('challenge')));
       const badge = Keypair.generate();
       
       const selectedChallengeRow = active.find((r: ChallengeRow) => r.publicKey.toBase58() === challenge.toBase58());
       const title = selectedChallengeRow?.account.title || 'Challenge';
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#0B1849"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#C5F74C" font-family="sans-serif" font-size="24">${title}</text></svg>`;
-      const svgFile = new File([svg], 'badge.svg', { type: 'image/svg+xml' });
-      const svgForm = new FormData();
-      svgForm.set('file', svgFile);
-      const svgRes = await fetch('/api/pinata/upload', { method: 'POST', body: svgForm });
-      const svgResult = await svgRes.json();
-      if (!svgRes.ok) throw new Error(svgResult.error || 'Failed to upload image');
-      const imageUri = svgResult.url;
+      const description = `Proof of completion for the Talk and Do challenge: ${title}. This permanent, non-transferable achievement badge confirms that the challenge was completed before its deadline.`;
+
+      const badgeImageResponse = await fetch('/talkndo-completion-badge.png');
+      if (!badgeImageResponse.ok) throw new Error('Failed to load the completion badge image');
+      const badgeImage = new File(
+        [await badgeImageResponse.blob()],
+        'talkndo-completion-badge.png',
+        { type: 'image/png' },
+      );
+      const imageForm = new FormData();
+      imageForm.set('file', badgeImage);
+      const imageResponse = await fetch('/api/pinata/upload', { method: 'POST', body: imageForm });
+      const imageResult = await imageResponse.json();
+      if (!imageResponse.ok) throw new Error(imageResult.error || 'Failed to upload badge image');
+      const imageUri = imageResult.url;
 
       const metadataJson = {
-        name: "Talk and Do",
-        description: `Completed ${title}`,
+        name: `Talk and Do: ${title}`,
+        description,
         image: imageUri,
+        attributes: [
+          { trait_type: 'Achievement', value: 'Challenge completed' },
+          { trait_type: 'Completed challenge', value: title },
+        ],
+        properties: {
+          files: [
+            {
+              uri: imageUri,
+              type: 'image/png',
+            }
+          ],
+          category: "image"
+        }
       };
       const jsonFile = new File([JSON.stringify(metadataJson)], 'metadata.json', { type: 'application/json' });
       const form = new FormData();
@@ -366,7 +388,7 @@ function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
       const builder = program.methods.completeChallenge(proofUri, actualBadgeUri).accounts({ creator: publicKey, challenge, badgeAsset: badge.publicKey, systemProgram: SystemProgram.programId, mplCoreProgram: new PublicKey('CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d') }).signers([badge]).postInstructions([memo]);
       const signature = await execute('Challenge completed', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc(), signers: [badge] }));
       if (signature) {
-        event.currentTarget.reset();
+        formElement.reset();
         setProofUri('');
         setUploadProgress(0);
       }
@@ -384,15 +406,16 @@ function ExpireChallenge({ program, challenges, execute }: any) {
   const [submitting, setSubmitting] = useState(false);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setSubmitting(true);
     try {
-      const challenge = new PublicKey(String(new FormData(event.currentTarget).get('challenge')));
+      const challenge = new PublicKey(String(new FormData(formElement).get('challenge')));
       const caller = program.provider.publicKey as PublicKey;
       const memo = createMemoInstruction({ type: 'talkndo:expire_challenge', challenge: challenge.toBase58(), caller: caller.toBase58() });
       const builder = program.methods.expireChallenge().accounts({ caller, config: getConfigPda(), charityVault: getCharityVaultPda(), challenge }).postInstructions([memo]);
       const signature = await execute('Challenge expired', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
       if (signature) {
-        event.currentTarget.reset();
+        formElement.reset();
       }
     } finally {
       setSubmitting(false);
@@ -407,26 +430,27 @@ function Admin({ program, publicKey, config, vault, treasuryMembers, execute, is
 
   const initialize = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setPendingAction('initialize');
     try {
-      const treasury = new PublicKey(String(new FormData(event.currentTarget).get('treasury')));
+      const treasury = new PublicKey(String(new FormData(formElement).get('treasury')));
       const memo = createMemoInstruction({ type: 'talkndo:initialize_protocol', authority: publicKey.toBase58(), primaryTreasury: treasury.toBase58() });
       const builder = program.methods.initialize(treasury).accounts({ authority: publicKey, config: getConfigPda(), charityVault: getCharityVaultPda(), primaryTreasuryMember: getTreasuryMemberPda(treasury), systemProgram: SystemProgram.programId }).postInstructions([memo]);
       const signature = await execute('Protocol initialized', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
-      if (signature) event.currentTarget.reset();
+      if (signature) formElement.reset();
     } finally { setPendingAction(null); }
   };
 
   const addMember = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = event.currentTarget;
+    const formElement = event.currentTarget;
     setPendingAction('add');
     try {
-      const member = new PublicKey(String(new FormData(form).get('member')));
+      const member = new PublicKey(String(new FormData(formElement).get('member')));
       const memo = createMemoInstruction({ type: 'talkndo:add_treasury_member', primaryTreasury: publicKey.toBase58(), member: member.toBase58() });
       const builder = program.methods.addTreasuryMember(member).accounts({ primaryTreasuryAuthority: publicKey, config: getConfigPda(), treasuryMember: getTreasuryMemberPda(member), systemProgram: SystemProgram.programId }).postInstructions([memo]);
       const signature = await execute('Treasury member added', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
-      if (signature) form.reset();
+      if (signature) formElement.reset();
     } finally { setPendingAction(null); }
   };
 
@@ -442,9 +466,10 @@ function Admin({ program, publicKey, config, vault, treasuryMembers, execute, is
 
   const withdraw = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setPendingAction('withdraw');
     try {
-      const data = new FormData(event.currentTarget);
+      const data = new FormData(formElement);
       const recipient = new PublicKey(String(data.get('recipient')));
       const amount = new BN(Math.round(Number(data.get('amount')) * LAMPORTS_PER_SOL));
       const treasuryMember = getTreasuryMemberPda(publicKey);
@@ -456,7 +481,7 @@ function Admin({ program, publicKey, config, vault, treasuryMembers, execute, is
       if (bootstrapPrimaryMember) builder = builder.preInstructions([bootstrapPrimaryMember]);
       const signature = await execute('Charity funds sent', async () => ({ transaction: await builder.transaction(), send: () => builder.rpc() }));
       if (signature) {
-        event.currentTarget.reset();
+        formElement.reset();
         setWithdrawOpen(false);
       }
     } finally { setPendingAction(null); }
@@ -473,6 +498,6 @@ function Admin({ program, publicKey, config, vault, treasuryMembers, execute, is
   </>;
 }
 
-function Interaction({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) { return <article className="interaction"><p className="eyebrow">Contract interaction</p><h2>{title}</h2><p className="subtitle">{subtitle}</p>{children}</article>; }
+function Interaction({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) { return <article className="interaction"><h2>{title}</h2><p className="subtitle">{subtitle}</p>{children}</article>; }
 function Field({ label, ...props }: any) { return <label className="field"><span>{label}</span><input {...props} /></label>; }
 function SelectChallenge({ rows }: { rows: ChallengeRow[] }) { return <label className="field"><span>Challenge</span><select name="challenge" required disabled={!rows.length}><option value="">{rows.length ? 'Select a challenge' : 'No eligible challenges'}</option>{rows.map(({ publicKey, account }) => <option value={publicKey.toBase58()} key={publicKey.toBase58()}>{account.title} — #{account.challengeId.toString()}</option>)}</select></label>; }
