@@ -20,6 +20,8 @@ import {
 } from '@/lib/program';
 
 type View = 'challenges' | 'create' | 'complete' | 'expire' | 'admin';
+
+const COMPLETION_BADGE_IMAGE_URI = 'https://aqua-junior-bobolink-189.mypinata.cloud/ipfs/bafybeiasp7opjsggxtjsdjtbf6e55kziqvhljgcx2vo6tpc4fccl5yj4ii';
 type ChallengeRow = { publicKey: PublicKey; account: any };
 type TreasuryMemberRow = { publicKey: PublicKey; account: any };
 
@@ -347,24 +349,10 @@ function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
       const title = selectedChallengeRow?.account.title || 'Challenge';
       const description = `Proof of completion for the Talk and Do challenge: ${title}. This permanent, non-transferable achievement badge confirms that the challenge was completed before its deadline.`;
 
-      const badgeImageResponse = await fetch('/talkndo-completion-badge.png');
-      if (!badgeImageResponse.ok) throw new Error('Failed to load the completion badge image');
-      const badgeImage = new File(
-        [await badgeImageResponse.blob()],
-        'talkndo-completion-badge.png',
-        { type: 'image/png' },
-      );
-      const imageForm = new FormData();
-      imageForm.set('file', badgeImage);
-      const imageResponse = await fetch('/api/pinata/upload', { method: 'POST', body: imageForm });
-      const imageResult = await imageResponse.json();
-      if (!imageResponse.ok) throw new Error(imageResult.error || 'Failed to upload badge image');
-      const imageUri = imageResult.url;
-
       const metadataJson = {
         name: `Talk and Do: ${title}`,
         description,
-        image: imageUri,
+        image: COMPLETION_BADGE_IMAGE_URI,
         attributes: [
           { trait_type: 'Achievement', value: 'Challenge completed' },
           { trait_type: 'Completed challenge', value: title },
@@ -372,7 +360,7 @@ function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
         properties: {
           files: [
             {
-              uri: imageUri,
+              uri: COMPLETION_BADGE_IMAGE_URI,
               type: 'image/png',
             }
           ],
