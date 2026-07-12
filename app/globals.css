@@ -97,6 +97,9 @@ button {
 .wallet-address:hover {
   color: var(--green);
 }
+.mobile-balance {
+  display: none;
+}
 .wallet-adapter-button-trigger {
   background: var(--ink) !important;
   height: 42px !important;
@@ -594,9 +597,18 @@ footer a {
   }
   .topbar {
     height: 70px;
+    gap: 8px;
   }
   .network {
     display: none;
+  }
+  .mobile-balance {
+    display: block;
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
   }
   .brand strong {
     display: none;

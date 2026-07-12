@@ -77,6 +77,9 @@ export function Dashboard() {
   const isPrimaryTreasury = Boolean(publicKey && config?.treasury?.equals(publicKey));
   const isTreasuryMember = Boolean(publicKey && treasuryMembers.some(({ account }) => account.charityAuthority.equals(publicKey)));
   const canAccessProtocol = isAuthority || isPrimaryTreasury || isTreasuryMember;
+  const balanceLabel = walletBalance === null
+    ? '…'
+    : (walletBalance / LAMPORTS_PER_SOL).toLocaleString(undefined, { maximumFractionDigits: 4 });
 
   const refresh = useCallback(async () => {
     if (!program || !publicKey) {
@@ -137,7 +140,8 @@ export function Dashboard() {
     <main className="app-shell">
       <header className="topbar">
         <button className="brand" onClick={() => setView('challenges')}><span>TnD</span><strong>TalknDo</strong></button>
-        <div className="network"><i /> Devnet · {publicKey ? <button className="wallet-address" type="button" onClick={copyWalletAddress} title="Copy wallet address">{short(publicKey)}</button> : short(publicKey)}{publicKey ? ` · ${walletBalance === null ? '…' : (walletBalance / LAMPORTS_PER_SOL).toLocaleString(undefined, { maximumFractionDigits: 4 })} SOL` : ''}</div>
+        <div className="network"><i /> Devnet · {publicKey ? <button className="wallet-address" type="button" onClick={copyWalletAddress} title="Copy wallet address">{short(publicKey)}</button> : short(publicKey)}{publicKey ? ` · ${balanceLabel} SOL` : ''}</div>
+        {publicKey ? <span className="mobile-balance" aria-label={`Wallet balance: ${balanceLabel} SOL`}>{balanceLabel} SOL</span> : null}
         <WalletMultiButton />
       </header>
 
