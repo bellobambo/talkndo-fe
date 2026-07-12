@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
-const MAX_PDF_BYTES = 10 * 1024 * 1024;
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const SUPPORTED_FILE_TYPES = ['application/pdf', 'application/json', 'image/jpeg', 'image/png', 'image/webp'];
 
 export async function POST(request: Request) {
   try {
@@ -10,8 +11,8 @@ export async function POST(request: Request) {
     const input = await request.formData();
     const file = input.get('file');
     if (!(file instanceof File)) return NextResponse.json({ error: 'Choose a file first.' }, { status: 400 });
-    if (!['application/pdf', 'application/json', 'image/png'].includes(file.type)) return NextResponse.json({ error: 'Unsupported file type.' }, { status: 415 });
-    if (file.size > MAX_PDF_BYTES) return NextResponse.json({ error: 'File must be 10 MB or smaller.' }, { status: 413 });
+    if (!SUPPORTED_FILE_TYPES.includes(file.type)) return NextResponse.json({ error: 'Unsupported file type.' }, { status: 415 });
+    if (file.size > MAX_FILE_BYTES) return NextResponse.json({ error: 'File must be 10 MB or smaller.' }, { status: 413 });
 
     const payload = new FormData();
     payload.set('file', file, file.name);

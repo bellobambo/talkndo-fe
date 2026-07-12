@@ -295,9 +295,9 @@ function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
   const [submitting, setSubmitting] = useState(false);
   const uploadProps: UploadProps = {
     beforeUpload: (file) => {
-      const isPdf = file.type === 'application/pdf';
-      if (!isPdf) {
-        toast.error('Please upload a PDF file.');
+      const isSupportedProof = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(file.type);
+      if (!isSupportedProof) {
+        toast.error('Please upload a PDF, JPG, PNG, or WebP file.');
         return Upload.LIST_IGNORE;
       }
       return true;
@@ -306,7 +306,7 @@ function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
       const uploadFile = file as File;
       setUploading(true);
       setUploadProgress(20);
-      const id = toast.loading('Uploading PDF to IPFS…');
+      const id = toast.loading('Uploading proof to IPFS…');
       try {
         const form = new FormData();
         form.set('file', uploadFile);
@@ -317,7 +317,7 @@ function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
         setUploadProgress(100);
         onProgress?.({ percent: 100 });
         onSuccess?.(result as any, uploadFile as any);
-        toast.success('PDF pinned to IPFS', { id });
+        toast.success('Proof pinned to IPFS', { id });
       } catch (e) {
         setUploadProgress(0);
         onError?.(e as Error);
@@ -327,7 +327,7 @@ function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
       }
     },
     maxCount: 1,
-    accept: '.pdf,application/pdf',
+    accept: '.pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp',
     showUploadList: false,
     onRemove: () => {
       setProofUri('');
@@ -390,7 +390,7 @@ function CompleteChallenge({ program, publicKey, challenges, execute }: any) {
       setSubmitting(false);
     }
   };
-  return <Interaction title="Submit proof" subtitle="Upload your proof PDF, then mint your non-transferable Metaplex Core badge."><form onSubmit={submit} className="form"><SelectChallenge rows={active} /><Upload {...uploadProps} className="upload-field" style={{ width: '100%' }}><label className="upload" style={{ width: '100%' }}><span>{uploading ? 'Uploading…' : proofUri ? '✓ PDF ready on IPFS' : 'Choose proof PDF (max 10 MB)'}</span>{uploading || uploadProgress > 0 ? <Progress percent={uploadProgress} size="small" strokeColor={{ '0%': 'var(--green)', '100%': 'var(--lime)' }} trailColor="rgba(11,24,73,0.12)" /> : null}</label></Upload><input type="hidden" name="proofUri" value={proofUri} /><button className="primary" disabled={!active.length || uploading || !proofUri || submitting} type="submit">{submitting ? <><span className="button-spinner" aria-hidden="true" />Completing…</> : 'Review, reclaim stake & mint'}</button></form></Interaction>;
+  return <Interaction title="Submit proof" subtitle="Upload a document or photo as proof, then mint your non-transferable Metaplex Core badge."><form onSubmit={submit} className="form"><SelectChallenge rows={active} /><Upload {...uploadProps} className="upload-field" style={{ width: '100%' }}><label className="upload" style={{ width: '100%' }}><span>{uploading ? 'Uploading…' : proofUri ? '✓ Proof ready on IPFS' : 'Choose proof file or photo (max 10 MB)'}</span>{uploading || uploadProgress > 0 ? <Progress percent={uploadProgress} size="small" strokeColor={{ '0%': 'var(--green)', '100%': 'var(--lime)' }} trailColor="rgba(11,24,73,0.12)" /> : null}</label></Upload><input type="hidden" name="proofUri" value={proofUri} /><button className="primary" disabled={!active.length || uploading || !proofUri || submitting} type="submit">{submitting ? <><span className="button-spinner" aria-hidden="true" />Completing…</> : 'Review, reclaim stake & mint'}</button></form></Interaction>;
 }
 
 function ExpireChallenge({ program, challenges, execute }: any) {
