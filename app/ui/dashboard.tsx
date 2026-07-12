@@ -69,6 +69,7 @@ export function Dashboard() {
   const { publicKey } = useWallet();
   const [view, setView] = useState<View>('challenges');
   const [challenges, setChallenges] = useState<ChallengeRow[]>([]);
+  const [allChallenges, setAllChallenges] = useState<ChallengeRow[]>([]);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState<any>(null);
@@ -85,20 +86,20 @@ export function Dashboard() {
 
   const refresh = useCallback(async () => {
     if (!program || !publicKey) {
-      setChallenges([]); setWalletBalance(null); setConfig(null); setVault(null); setTreasuryMembers([]); return;
+      setChallenges([]); setAllChallenges([]); setWalletBalance(null); setConfig(null); setVault(null); setTreasuryMembers([]); return;
     }
     setLoading(true);
     try {
       const [all, balance, configAccount, vaultAccount, memberAccounts] = await Promise.all([
-        (program.account as any).challenge.all([
-          { memcmp: { offset: 8, bytes: publicKey.toBase58() } },
-        ]),
+        (program.account as any).challenge.all(),
         connection.getBalance(publicKey, 'confirmed'),
         (program.account as any).programConfig.fetchNullable(getConfigPda()),
         (program.account as any).charityVault.fetchNullable(getCharityVaultPda()),
         (program.account as any).treasuryMember.all(),
       ]);
-      setChallenges(all.sort((a: ChallengeRow, b: ChallengeRow) => b.account.createdAt.cmp(a.account.createdAt)));
+      const sorted = all.sort((a: ChallengeRow, b: ChallengeRow) => b.account.createdAt.cmp(a.account.createdAt));
+      setAllChallenges(sorted);
+      setChallenges(sorted.filter(({ account }: ChallengeRow) => account.creator.equals(publicKey)));
       setWalletBalance(balance);
       setConfig(configAccount); setVault(vaultAccount);
       setTreasuryMembers(memberAccounts);
@@ -162,7 +163,7 @@ export function Dashboard() {
         {publicKey && view === 'challenges' ? <ChallengeList rows={challenges} loading={loading} onRefresh={refresh} onAction={setView} /> : null}
         {publicKey && view === 'create' && program ? <CreateChallenge program={program} publicKey={publicKey} execute={execute} /> : null}
         {publicKey && view === 'complete' && program ? <CompleteChallenge program={program} publicKey={publicKey} challenges={challenges} execute={execute} /> : null}
-        {publicKey && view === 'expire' && program ? <ExpireChallenge program={program} challenges={challenges} execute={execute} /> : null}
+        {publicKey && view === 'expire' && program ? <ExpireChallenge program={program} challenges={allChallenges} execute={execute} /> : null}
         {publicKey && view === 'admin' && program && canAccessProtocol ? <Admin program={program} publicKey={publicKey} config={config} vault={vault} treasuryMembers={treasuryMembers} execute={execute} isAuthority={isAuthority} isPrimaryTreasury={isPrimaryTreasury} isTreasuryMember={isTreasuryMember} /> : null}
       </section>
 
